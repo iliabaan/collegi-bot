@@ -10,8 +10,6 @@ import (
 	"os"
 )
 
-const redirectURI = "http://localhost:8080/callback"
-
 var (
 	ch    = make(chan *spotify.Client)
 	state = "abc123"
@@ -21,7 +19,7 @@ func Spotify() (*spotify.Client, error) {
 	var auth = spotifyauth.New(
 		spotifyauth.WithClientID(os.Getenv("SPOTIFY_ID")),
 		spotifyauth.WithClientSecret(os.Getenv("SPOTIFY_SECRET")),
-		spotifyauth.WithRedirectURL(redirectURI),
+		spotifyauth.WithRedirectURL(os.Getenv("SPOTIFY_CALLBACK_URL")),
 		spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate, spotifyauth.ScopePlaylistModifyPrivate, spotifyauth.ScopePlaylistModifyPublic))
 
 	// start an HTTP server
@@ -34,7 +32,7 @@ func Spotify() (*spotify.Client, error) {
 	})
 
 	go func() {
-		err := http.ListenAndServe(":8080", nil)
+		err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -70,6 +68,9 @@ func completeAuth(w http.ResponseWriter, r *http.Request, auth *spotifyauth.Auth
 
 	// use the token to get an authenticated client
 	client := spotify.New(auth.Client(r.Context(), tok))
-	fmt.Fprintf(w, "Login Completed!")
+	_, err = fmt.Fprintf(w, "Login Completed!")
+	if err != nil {
+		return
+	}
 	ch <- client
 }
