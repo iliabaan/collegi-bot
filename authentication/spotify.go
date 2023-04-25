@@ -19,7 +19,7 @@ func Spotify() (*spotify.Client, error) {
 	var auth = spotifyauth.New(
 		spotifyauth.WithClientID(os.Getenv("SPOTIFY_ID")),
 		spotifyauth.WithClientSecret(os.Getenv("SPOTIFY_SECRET")),
-		spotifyauth.WithRedirectURL(os.Getenv("SPOTIFY_CALLBACK_URL")),
+		spotifyauth.WithRedirectURL(os.Getenv("APP_URL")+"/callback"),
 		spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate, spotifyauth.ScopePlaylistModifyPrivate, spotifyauth.ScopePlaylistModifyPublic))
 
 	// start an HTTP server
@@ -32,9 +32,9 @@ func Spotify() (*spotify.Client, error) {
 	})
 
 	go func() {
-		err := http.ListenAndServe(":"+os.Getenv("PORT"), nil)
+		err := http.ListenAndServe(":"+os.Getenv("EXPOSED_PORT"), nil)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 	}()
 
@@ -48,7 +48,7 @@ func Spotify() (*spotify.Client, error) {
 	// use the client to make calls that require authorization
 	user, err := client.CurrentUser(context.Background())
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	fmt.Println("You are logged in as:", user.ID)
 
@@ -59,11 +59,12 @@ func completeAuth(w http.ResponseWriter, r *http.Request, auth *spotifyauth.Auth
 	tok, err := auth.Token(r.Context(), state, r)
 	if err != nil {
 		http.Error(w, "Couldn't get token", http.StatusForbidden)
-		log.Fatal(err)
+		return
 	}
 	if st := r.FormValue("state"); st != state {
 		http.NotFound(w, r)
-		log.Fatalf("State mismatch: %s != %s\n", st, state)
+		log.Printf("State mismatch: %s != %s\n", st, state)
+		return
 	}
 
 	// use the token to get an authenticated client
