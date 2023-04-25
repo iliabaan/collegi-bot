@@ -2,6 +2,7 @@ FROM golang:1.20
 
 RUN go version
 ENV GOPATH=/
+ENV GOGC=400
 
 COPY ./ ./
 
